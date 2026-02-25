@@ -4,7 +4,7 @@ author: "github"
 description: "A GitHub Action to suggest removal of non-organization members from CODEOWNERS files."
 runs:
   using: "docker"
-  image: "docker://ghcr.io/github/cleanowners:v1"
+  image: "docker://ghcr.io/github-community-projects/cleanowners:v2"
 branding:
   icon: "bell"
   color: "orange"
