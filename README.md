@@ -1,6 +1,6 @@
 # Cleanowners action
 
-[![CodeQL](https://github.com/github/cleanowners/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/github/cleanowners/actions/workflows/github-code-scanning/codeql) [![Lint Code Base](https://github.com/github/cleanowners/actions/workflows/super-linter.yaml/badge.svg)](https://github.com/github/cleanowners/actions/workflows/super-linter.yaml) [![Python package](https://github.com/github/cleanowners/actions/workflows/python-ci.yml/badge.svg)](https://github.com/github/cleanowners/actions/workflows/python-ci.yml) [![Docker Image CI](https://github.com/github/cleanowners/actions/workflows/docker-ci.yml/badge.svg)](https://github.com/github/cleanowners/actions/workflows/docker-ci.yml)[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/github/cleanowners/badge)](https://scorecard.dev/viewer/?uri=github.com/github/cleanowners)
+[![CodeQL](https://github.com/github-community-projects/cleanowners/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/github-community-projects/cleanowners/actions/workflows/github-code-scanning/codeql) [![Lint Code Base](https://github.com/github-community-projects/cleanowners/actions/workflows/super-linter.yaml/badge.svg)](https://github.com/github-community-projects/cleanowners/actions/workflows/super-linter.yaml) [![Python package](https://github.com/github-community-projects/cleanowners/actions/workflows/python-ci.yml/badge.svg)](https://github.com/github-community-projects/cleanowners/actions/workflows/python-ci.yml) [![Docker Image CI](https://github.com/github-community-projects/cleanowners/actions/workflows/docker-ci.yml/badge.svg)](https://github.com/github-community-projects/cleanowners/actions/workflows/docker-ci.yml)[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/github-community-projects/cleanowners/badge)](https://scorecard.dev/viewer/?uri=github.com/github-community-projects/cleanowners)
 
 Cleanowners is a GitHub Action that is designed to help keep `CODEOWNERS` files current by removing users that are no longer a part of the organization. This is helpful for companies that are looking to remove outdated information in the `CODEOWNERS` file. This action can be paired with other `CODEOWNERS` related actions to suggest new owners or lint `CODEOWNERS` files to ensure accuracy.
 
@@ -10,7 +10,7 @@ This action was developed by the GitHub OSPO for our own use and developed in a 
 
 ## Support
 
-If you need support using this project or have questions about it, please [open up an issue in this repository](https://github.com/github/cleanowners/issues). Requests made directly to GitHub staff or support team will be redirected here to open an issue. GitHub SLA's and support/services contracts do not apply to this repository.
+If you need support using this project or have questions about it, please [open up an issue in this repository](https://github.com/github-community-projects/cleanowners/issues). Requests made directly to GitHub staff or support team will be redirected here to open an issue. GitHub SLA's and support/services contracts do not apply to this repository.
 
 ### OSPO GitHub Actions as a Whole
 
@@ -52,14 +52,14 @@ This action can be configured to authenticate with GitHub App Installation or Pe
 
 #### Other Configuration Options
 
-| field               | required                                        | default | description                                                                                                                                                                                                                             |
-| ------------------- | ----------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GH_ENTERPRISE_URL` | False                                           | ""      | The `GH_ENTERPRISE_URL` is used to connect to an enterprise server instance of GitHub. github.com users should not enter anything here.                                                                                                 |
-| `ORGANIZATION`      | Required to have `ORGANIZATION` or `REPOSITORY` |         | The name of the GitHub organization which you want this action to work from. ie. github.com/github would be `github`                                                                                                                    |
-| `REPOSITORY`        | Required to have `ORGANIZATION` or `REPOSITORY` |         | The name of the repository and organization which you want this action to work from. ie. `github/cleanowners` or a comma separated list of multiple repositories `github/cleanowners,super-linter/super-linter`                         |
-| `EXEMPT_REPOS`      | False                                           | ""      | These repositories will be exempt from this action. ex: If my org is set to `github` then I might want to exempt a few of the repos but get the rest by setting `EXEMPT_REPOS` to `github/cleanowners,github/contributors`              |
-| `DRY_RUN`           | False                                           | False   | If set to true, this action will not create any pull requests. It will only log the repositories that could have the `CODEOWNERS` file updated. This is useful for testing or discovering the scope of this issue in your organization. |
-| `ISSUE_REPORT`      | False                                           | False   | If set to true, this action will create an issue in the repository with the report on the repositories that had users removed from the `CODEOWNERS` file.                                                                               |
+| field               | required                                        | default | description                                                                                                                                                                                                                                           |
+| ------------------- | ----------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GH_ENTERPRISE_URL` | False                                           | ""      | The `GH_ENTERPRISE_URL` is used to connect to an enterprise server instance of GitHub. github.com users should not enter anything here.                                                                                                               |
+| `ORGANIZATION`      | Required to have `ORGANIZATION` or `REPOSITORY` |         | The name of the GitHub organization which you want this action to work from. ie. github.com/github would be `github`                                                                                                                                  |
+| `REPOSITORY`        | Required to have `ORGANIZATION` or `REPOSITORY` |         | The name of the repository and organization which you want this action to work from. ie. `github-community-projects/cleanowners` or a comma separated list of multiple repositories `github-community-projects/cleanowners,super-linter/super-linter` |
+| `EXEMPT_REPOS`      | False                                           | ""      | These repositories will be exempt from this action. ex: If my org is set to `github` then I might want to exempt a few of the repos but get the rest by setting `EXEMPT_REPOS` to `github-community-projects/cleanowners,github/contributors`         |
+| `DRY_RUN`           | False                                           | False   | If set to true, this action will not create any pull requests. It will only log the repositories that could have the `CODEOWNERS` file updated. This is useful for testing or discovering the scope of this issue in your organization.               |
+| `ISSUE_REPORT`      | False                                           | False   | If set to true, this action will create an issue in the repository with the report on the repositories that had users removed from the `CODEOWNERS` file.                                                                                             |
 
 ### Example workflows
 
@@ -85,7 +85,7 @@ jobs:
 
     steps:
       - name: Run cleanowners action
-        uses: github/cleanowners@v1
+        uses: github-community-projects/cleanowners@v2
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ORGANIZATION: <YOUR_ORGANIZATION_GOES_HERE>
@@ -113,7 +113,7 @@ jobs:
 
     steps:
       - name: Run cleanowners action
-        uses: github/cleanowners@v1
+        uses: github-community-projects/cleanowners@v2
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ORGANIZATION: <YOUR_ORGANIZATION_GOES_HERE>
@@ -152,7 +152,7 @@ jobs:
 
     steps:
       - name: Run cleanowners action
-        uses: github/cleanowners@v1
+        uses: github-community-projects/cleanowners@v2
         env:
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
           GH_APP_INSTALLATION_ID: ${{ secrets.GH_APP_INSTALLATION_ID }}
