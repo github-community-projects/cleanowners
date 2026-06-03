@@ -44,11 +44,29 @@ This action can be configured to authenticate with GitHub App Installation or Pe
 | `GH_APP_PRIVATE_KEY`         | True     | `""`    | GitHub Application Private Key. See [documentation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app) for more details.     |
 | `GITHUB_APP_ENTERPRISE_ONLY` | False    | `false` | Set this input to `true` if your app is created in GHE and communicates with GHE.                                                                                                                       |
 
+###### Required GitHub App permissions
+
+The GitHub App must be installed on every repository the action will scan
+(or installed on the organization with "All repositories" selected), and the
+App must be granted these permissions:
+
+- **Repository → Metadata**: Read (default)
+- **Repository → Contents**: Read & write — read CODEOWNERS files; create branches and commit the placeholder CODEOWNERS file when one is missing
+- **Repository → Pull requests**: Read & write — open PRs that suggest CODEOWNERS changes
+- **Organization → Members**: Read — check whether each CODEOWNERS entry is still an organization member
+
+If any of these are missing the action fails with `Error: 403 Resource not accessible by integration` on the first API call that needs the missing permission. Updating an existing App's permissions also requires the installation owner to accept the new permission request before it takes effect.
+
 ##### Personal Access Token (PAT)
 
-| field      | required | default | description                                                                                                           |
-| ---------- | -------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
-| `GH_TOKEN` | True     | `""`    | The GitHub Token used to scan the repository. Must have read access to all repository you are interested in scanning. |
+| field      | required | default | description                                                            |
+| ---------- | -------- | ------- | ---------------------------------------------------------------------- |
+| `GH_TOKEN` | True     | `""`    | The GitHub Token used to scan repositories. See required scopes below. |
+
+###### Required PAT scopes
+
+- **Classic PAT**: `repo` (read & write to repository contents and pull requests) and `read:org` (organization membership checks)
+- **Fine-grained PAT**: for every target repository — **Contents**: Read & write, **Pull requests**: Read & write, **Metadata**: Read; for the organization — **Members**: Read
 
 #### Other Configuration Options
 
