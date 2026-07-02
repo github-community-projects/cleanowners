@@ -5,7 +5,6 @@ import uuid
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
-import github3
 from cleanowners import (
     build_default_codeowners,
     cleanup_whitespace,
@@ -17,6 +16,7 @@ from cleanowners import (
     print_stats,
     remove_username_from_content,
 )
+from github import GithubException
 
 
 class TestCommitChanges(unittest.TestCase):
@@ -25,15 +25,15 @@ class TestCommitChanges(unittest.TestCase):
     @patch("uuid.uuid4")
     def test_commit_changes(self, mock_uuid):
         """Test the commit_changes function."""
-        mock_uuid.return_value = uuid.UUID(
-            "12345678123456781234567812345678"
-        )  # Mock UUID generation
-        mock_repo = MagicMock()  # Mock repo object
+        mock_uuid.return_value = uuid.UUID("12345678123456781234567812345678")
+        mock_repo = MagicMock()
         mock_repo.default_branch = "main"
-        mock_repo.ref.return_value.object.sha = "abc123"  # Mock SHA for latest commit
-        mock_repo.create_ref.return_value = True
-        mock_repo.file_contents.return_value = MagicMock()
-        mock_repo.file_contents.update.return_value = True
+        mock_repo.get_git_ref.return_value.object.sha = "abc123"
+        mock_repo.create_git_ref.return_value = True
+        mock_existing_file = MagicMock()
+        mock_existing_file.sha = "existing_sha"
+        mock_repo.get_contents.return_value = mock_existing_file
+        mock_repo.update_file.return_value = True
         mock_repo.create_pull.return_value = "MockPullRequest"
 
         title = "Test Title"
@@ -50,11 +50,17 @@ class TestCommitChanges(unittest.TestCase):
             "CODEOWNERS",
         )
 
-        # Assert that the methods were called with the correct arguments
-        mock_repo.create_ref.assert_called_once_with(
+        mock_repo.create_git_ref.assert_called_once_with(
             f"refs/heads/{branch_name}", "abc123"
         )
-        mock_repo.file_contents.assert_called_once_with("CODEOWNERS")
+        mock_repo.get_contents.assert_called_once_with("CODEOWNERS", ref=branch_name)
+        mock_repo.update_file.assert_called_once_with(
+            "CODEOWNERS",
+            commit_message,
+            dependabot_file,
+            "existing_sha",
+            branch=branch_name,
+        )
         mock_repo.create_pull.assert_called_once_with(
             title=title,
             body=body,
@@ -62,7 +68,6 @@ class TestCommitChanges(unittest.TestCase):
             base="main",
         )
 
-        # Assert that the function returned the expected result
         self.assertEqual(result, "MockPullRequest")
 
     @patch("uuid.uuid4")
@@ -71,8 +76,8 @@ class TestCommitChanges(unittest.TestCase):
         mock_uuid.return_value = uuid.UUID("12345678123456781234567812345678")
         mock_repo = MagicMock()
         mock_repo.default_branch = "main"
-        mock_repo.ref.return_value.object.sha = "abc123"
-        mock_repo.create_ref.return_value = True
+        mock_repo.get_git_ref.return_value.object.sha = "abc123"
+        mock_repo.create_git_ref.return_value = True
         mock_repo.create_file.return_value = True
         mock_repo.create_pull.return_value = "MockPullRequest"
 
@@ -87,7 +92,7 @@ class TestCommitChanges(unittest.TestCase):
         )
 
         branch_name = "codeowners-12345678-1234-5678-1234-567812345678"
-        mock_repo.create_ref.assert_called_once_with(
+        mock_repo.create_git_ref.assert_called_once_with(
             f"refs/heads/{branch_name}", "abc123"
         )
         mock_repo.create_file.assert_called_once_with(
@@ -96,7 +101,7 @@ class TestCommitChanges(unittest.TestCase):
             b"new content",
             branch=branch_name,
         )
-        mock_repo.file_contents.assert_not_called()
+        mock_repo.get_contents.assert_not_called()
         self.assertEqual(result, "MockPullRequest")
 
 
@@ -269,82 +274,71 @@ class TestGetUsernamesFromCodeowners(unittest.TestCase):
 class TestGetOrganization(unittest.TestCase):
     """Test the get_org function in cleanowners.py"""
 
-    @patch("github3.login")
-    def test_get_organization_succeeds(self, mock_github):
+    def test_get_organization_succeeds(self):
         """Test the organization is valid."""
         organization = "my_organization"
-        github_connection = mock_github.return_value
+        github_connection = MagicMock()
 
         mock_organization = MagicMock()
-        github_connection.organization.return_value = mock_organization
+        github_connection.get_organization.return_value = mock_organization
 
         result = get_org(github_connection, organization)
 
-        github_connection.organization.assert_called_once_with(organization)
+        github_connection.get_organization.assert_called_once_with(organization)
         self.assertEqual(result, mock_organization)
 
-    @patch("github3.login")
-    def test_get_organization_fails(self, mock_github):
+    def test_get_organization_fails(self):
         """Test the organization is not valid."""
         organization = "my_organization"
-        github_connection = mock_github.return_value
+        github_connection = MagicMock()
 
-        github_connection.organization.side_effect = github3.exceptions.NotFoundError(
-            resp=MagicMock(status_code=404)
+        github_connection.get_organization.side_effect = GithubException(
+            404, {"message": "Not Found"}, None
         )
         result = get_org(github_connection, organization)
 
-        github_connection.organization.assert_called_once_with(organization)
+        github_connection.get_organization.assert_called_once_with(organization)
         self.assertIsNone(result)
 
 
 class TestGetReposIterator(unittest.TestCase):
     """Test the get_repos_iterator function in evergreen.py"""
 
-    @patch("github3.login")
-    def test_get_repos_iterator_with_organization(self, mock_github):
+    def test_get_repos_iterator_with_organization(self):
         """Test the get_repos_iterator function with an organization"""
         organization = "my_organization"
         repository_list = []
-        github_connection = mock_github.return_value
+        github_connection = MagicMock()
 
         mock_organization = MagicMock()
         mock_repositories = MagicMock()
-        mock_organization.repositories.return_value = mock_repositories
-        github_connection.organization.return_value = mock_organization
+        mock_organization.get_repos.return_value = mock_repositories
+        github_connection.get_organization.return_value = mock_organization
 
         result = get_repos_iterator(organization, repository_list, github_connection)
 
-        # Assert that the organization method was called with the correct argument
-        github_connection.organization.assert_called_once_with(organization)
-
-        # Assert that the repositories method was called on the organization object
-        mock_organization.repositories.assert_called_once()
-
-        # Assert that the function returned the expected result
+        github_connection.get_organization.assert_called_once_with(organization)
+        mock_organization.get_repos.assert_called_once()
         self.assertEqual(result, mock_repositories)
 
-    @patch("github3.login")
-    def test_get_repos_iterator_with_repository_list(self, mock_github):
+    def test_get_repos_iterator_with_repository_list(self):
         """Test the get_repos_iterator function with a repository list"""
         organization = None
         repository_list = ["org/repo1", "org2/repo2"]
-        github_connection = mock_github.return_value
+        github_connection = MagicMock()
 
         mock_repository = MagicMock()
         mock_repository_list = [mock_repository, mock_repository]
-        github_connection.repository.side_effect = mock_repository_list
+        github_connection.get_repo.side_effect = mock_repository_list
 
         result = get_repos_iterator(organization, repository_list, github_connection)
 
-        # Assert that the repository method was called with the correct arguments for each repository in the list
         expected_calls = [
-            unittest.mock.call("org", "repo1"),
-            unittest.mock.call("org2", "repo2"),
+            unittest.mock.call("org/repo1"),
+            unittest.mock.call("org2/repo2"),
         ]
-        github_connection.repository.assert_has_calls(expected_calls)
+        github_connection.get_repo.assert_has_calls(expected_calls)
 
-        # Assert that the function returned the expected result
         self.assertEqual(result, mock_repository_list)
 
 
@@ -402,7 +396,7 @@ class TestGetCodeownersFile(unittest.TestCase):
 
     def test_codeowners_in_github_folder(self):
         """Test that a CODEOWNERS file in the .github folder is considered valid."""
-        self.repo.file_contents.side_effect = lambda path: (
+        self.repo.get_contents.side_effect = lambda path: (
             MagicMock(size=1) if path == ".github/CODEOWNERS" else None
         )
         contents, path = get_codeowners_file(self.repo)
@@ -411,7 +405,7 @@ class TestGetCodeownersFile(unittest.TestCase):
 
     def test_codeowners_in_root(self):
         """Test that a CODEOWNERS file in the root is considered valid."""
-        self.repo.file_contents.side_effect = lambda path: (
+        self.repo.get_contents.side_effect = lambda path: (
             MagicMock(size=1) if path == "CODEOWNERS" else None
         )
         contents, path = get_codeowners_file(self.repo)
@@ -420,7 +414,7 @@ class TestGetCodeownersFile(unittest.TestCase):
 
     def test_codeowners_in_docs_folder(self):
         """Test that a CODEOWNERS file in a docs folder is considered valid."""
-        self.repo.file_contents.side_effect = lambda path: (
+        self.repo.get_contents.side_effect = lambda path: (
             MagicMock(size=1) if path == "docs/CODEOWNERS" else None
         )
         contents, path = get_codeowners_file(self.repo)
@@ -429,22 +423,22 @@ class TestGetCodeownersFile(unittest.TestCase):
 
     def test_codeowners_not_found(self):
         """Test that a missing CODEOWNERS file is not considered valid because it doesn't exist."""
-        self.repo.file_contents.side_effect = lambda path: None
+        self.repo.get_contents.side_effect = lambda path: None
         contents, path = get_codeowners_file(self.repo)
         self.assertIsNone(contents)
         self.assertIsNone(path)
 
     def test_codeowners_empty_file(self):
         """Test that an empty CODEOWNERS file is returned for further handling."""
-        self.repo.file_contents.side_effect = lambda path: MagicMock(size=0)
+        self.repo.get_contents.side_effect = lambda path: MagicMock(size=0)
         contents, path = get_codeowners_file(self.repo)
         self.assertIsNotNone(contents)
         self.assertEqual(path, ".github/CODEOWNERS")
 
     def test_codeowners_not_found_then_found(self):
         """Test that a later path is used when earlier ones are not found."""
-        not_found = github3.exceptions.NotFoundError(resp=MagicMock(status_code=404))
-        self.repo.file_contents.side_effect = [not_found, MagicMock(size=1)]
+        not_found = GithubException(404, {"message": "Not Found"}, None)
+        self.repo.get_contents.side_effect = [not_found, MagicMock(size=1)]
         contents, path = get_codeowners_file(self.repo)
         self.assertIsNotNone(contents)
         self.assertEqual(path, "CODEOWNERS")

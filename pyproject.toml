@@ -4,9 +4,8 @@ version = "2.0.0"
 description = "GitHub Action that cleans up CODEOWNERS files by removing users who are no longer part of the organization."
 requires-python = ">=3.11"
 dependencies = [
-    "github3-py==4.0.1",
+    "PyGithub>=2.6.0",
     "python-dotenv==1.2.2",
-    "requests==2.34.2",
 ]
 
 [dependency-groups]
@@ -19,5 +18,4 @@ dev = [
     "pylint==4.0.6",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "types-requests==2.33.0.20260518",
 ]
