@@ -25,6 +25,7 @@ def auth_to_github(
     Returns:
         Github: the GitHub connection object
     """
+    ghe = ghe.rstrip("/")
     if gh_app_id and gh_app_private_key_bytes and gh_app_installation_id:
         app_auth = Auth.AppAuth(int(gh_app_id), gh_app_private_key_bytes.decode())
         installation_auth = app_auth.get_installation_auth(int(gh_app_installation_id))

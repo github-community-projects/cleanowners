@@ -195,8 +195,12 @@ def main():  # pragma: no cover
                     break
 
                 # Check to see if the username is a member of the organization
-                member = github_connection.get_user(username)
-                if not gh_org.has_in_members(member):
+                try:
+                    member = github_connection.get_user(username)
+                    is_member = gh_org.has_in_members(member)
+                except UnknownObjectException:
+                    is_member = False
+                if not is_member:
                     print(
                         f"\t{username} is not a member of {org}. Suggest removing them from {repo.full_name}"
                     )
