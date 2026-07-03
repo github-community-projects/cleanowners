@@ -16,7 +16,7 @@ from cleanowners import (
     print_stats,
     remove_username_from_content,
 )
-from github import GithubException
+from github import UnknownObjectException
 
 
 class TestCommitChanges(unittest.TestCase):
@@ -292,7 +292,7 @@ class TestGetOrganization(unittest.TestCase):
         organization = "my_organization"
         github_connection = MagicMock()
 
-        github_connection.get_organization.side_effect = GithubException(
+        github_connection.get_organization.side_effect = UnknownObjectException(
             404, {"message": "Not Found"}, None
         )
         result = get_org(github_connection, organization)
@@ -437,7 +437,7 @@ class TestGetCodeownersFile(unittest.TestCase):
 
     def test_codeowners_not_found_then_found(self):
         """Test that a later path is used when earlier ones are not found."""
-        not_found = GithubException(404, {"message": "Not Found"}, None)
+        not_found = UnknownObjectException(404, {"message": "Not Found"}, None)
         self.repo.get_contents.side_effect = [not_found, MagicMock(size=1)]
         contents, path = get_codeowners_file(self.repo)
         self.assertIsNotNone(contents)

@@ -6,7 +6,7 @@ import uuid
 
 import auth
 import env
-from github import GithubException
+from github import GithubException, UnknownObjectException
 from markdown_writer import write_step_summary, write_to_markdown
 
 
@@ -14,7 +14,7 @@ def get_org(github_connection, organization):
     """Get the organization object"""
     try:
         return github_connection.get_organization(organization)
-    except GithubException:
+    except UnknownObjectException:
         print(f"Organization {organization} not found")
         return None
 
@@ -165,17 +165,19 @@ def main():  # pragma: no cover
                     pull_count += 1
                     pull_request_urls.append(pull.html_url)
                     print(f"\tCreated pull request {pull.html_url}")
-                except GithubException:
-                    print("\tFailed to create pull request. Check write permissions.")
+                except GithubException as e:
+                    print(
+                        f"\tFailed to create pull request"
+                        f" (status {e.status}): {e.data}."
+                        f" Check write permissions."
+                    )
                 continue
 
             codeowners_count += 1
 
-            if codeowners_file_contents.content is None:
-                blob = repo.get_git_blob(repo.get_contents(codeowners_filepath).sha)
-                codeowners_decoded = blob.content.encode("utf-8")
-                if blob.encoding == "base64":
-                    codeowners_decoded = base64.b64decode(blob.content)
+            if codeowners_file_contents.encoding == "none":
+                blob = repo.get_git_blob(codeowners_file_contents.sha)
+                codeowners_decoded = base64.b64decode(blob.content)
             else:
                 codeowners_decoded = codeowners_file_contents.decoded_content
 
@@ -193,7 +195,8 @@ def main():  # pragma: no cover
                     break
 
                 # Check to see if the username is a member of the organization
-                if not gh_org.has_in_members(username):
+                member = github_connection.get_user(username)
+                if not gh_org.has_in_members(member):
                     print(
                         f"\t{username} is not a member of {org}. Suggest removing them from {repo.full_name}"
                     )
@@ -238,8 +241,12 @@ def main():  # pragma: no cover
                     pull_count += 1
                     pull_request_urls.append(pull.html_url)
                     print(f"\tCreated pull request {pull.html_url}")
-                except GithubException:
-                    print("\tFailed to create pull request. Check write permissions.")
+                except GithubException as e:
+                    print(
+                        f"\tFailed to create pull request"
+                        f" (status {e.status}): {e.data}."
+                        f" Check write permissions."
+                    )
                     continue
     except Exception as e:  # pylint: disable=broad-exception-caught
         error_message = str(e)
@@ -292,7 +299,7 @@ def get_codeowners_file(repo):
             codeowners_file_contents = repo.get_contents(path)
             if codeowners_file_contents:
                 return codeowners_file_contents, path
-        except GithubException:
+        except UnknownObjectException:
             continue
     return None, None
 
