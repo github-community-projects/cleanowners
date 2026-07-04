@@ -1,19 +1,20 @@
 """A GitHub Action to suggest removal of non-organization members from CODEOWNERS files."""
 
+import base64
 import re
 import uuid
 
 import auth
 import env
-import github3
+from github import GithubException, UnknownObjectException
 from markdown_writer import write_step_summary, write_to_markdown
 
 
 def get_org(github_connection, organization):
     """Get the organization object"""
     try:
-        return github_connection.organization(organization)
-    except github3.exceptions.NotFoundError:
+        return github_connection.get_organization(organization)
+    except UnknownObjectException:
         print(f"Organization {organization} not found")
         return None
 
@@ -164,19 +165,21 @@ def main():  # pragma: no cover
                     pull_count += 1
                     pull_request_urls.append(pull.html_url)
                     print(f"\tCreated pull request {pull.html_url}")
-                except github3.exceptions.NotFoundError:
-                    print("\tFailed to create pull request. Check write permissions.")
+                except GithubException as e:
+                    print(
+                        f"\tFailed to create pull request"
+                        f" (status {e.status}): {e.data}."
+                        f" Check write permissions."
+                    )
                 continue
 
             codeowners_count += 1
 
-            if codeowners_file_contents.content is None:
-                # This is a large file so we need to get the sha and download based off the sha
-                codeowners_decoded = repo.blob(
-                    repo.file_contents(codeowners_filepath).sha
-                ).decode_content()
+            if codeowners_file_contents.encoding == "none":
+                blob = repo.get_git_blob(codeowners_file_contents.sha)
+                codeowners_decoded = base64.b64decode(blob.content)
             else:
-                codeowners_decoded = codeowners_file_contents.decoded
+                codeowners_decoded = codeowners_file_contents.decoded_content
 
             # Extract the usernames from the CODEOWNERS file
             usernames = get_usernames_from_codeowners(codeowners_decoded)
@@ -192,7 +195,12 @@ def main():  # pragma: no cover
                     break
 
                 # Check to see if the username is a member of the organization
-                if not gh_org.is_member(username):
+                try:
+                    member = github_connection.get_user(username)
+                    is_member = gh_org.has_in_members(member)
+                except UnknownObjectException:
+                    is_member = False
+                if not is_member:
                     print(
                         f"\t{username} is not a member of {org}. Suggest removing them from {repo.full_name}"
                     )
@@ -237,8 +245,12 @@ def main():  # pragma: no cover
                     pull_count += 1
                     pull_request_urls.append(pull.html_url)
                     print(f"\tCreated pull request {pull.html_url}")
-                except github3.exceptions.NotFoundError:
-                    print("\tFailed to create pull request. Check write permissions.")
+                except GithubException as e:
+                    print(
+                        f"\tFailed to create pull request"
+                        f" (status {e.status}): {e.data}."
+                        f" Check write permissions."
+                    )
                     continue
     except Exception as e:  # pylint: disable=broad-exception-caught
         error_message = str(e)
@@ -288,10 +300,10 @@ def get_codeowners_file(repo):
     codeowners_file_contents = None
     for path in (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"):
         try:
-            codeowners_file_contents = repo.file_contents(path)
+            codeowners_file_contents = repo.get_contents(path)
             if codeowners_file_contents:
                 return codeowners_file_contents, path
-        except github3.exceptions.NotFoundError:
+        except UnknownObjectException:
             continue
     return None, None
 
@@ -322,13 +334,10 @@ def get_repos_iterator(organization, repository_list, github_connection):
     """Get the repositories from the organization or list of repositories"""
     repos = []
     if organization and not repository_list:
-        repos = github_connection.organization(organization).repositories()
+        repos = github_connection.get_organization(organization).get_repos()
     else:
-        # Get the repositories from the repository_list
         for full_repo_path in repository_list:
-            org = full_repo_path.split("/")[0]
-            repo = full_repo_path.split("/")[1]
-            repos.append(github_connection.repository(org, repo))
+            repos.append(github_connection.get_repo(full_repo_path))
 
     return repos
 
@@ -387,11 +396,10 @@ def commit_changes(
 ):
     """Commit the changes to the repo and open a pull request and return the pull request object"""
     default_branch = repo.default_branch
-    # Get latest commit sha from default branch
-    default_branch_commit = repo.ref(f"heads/{default_branch}").object.sha
+    default_branch_commit = repo.get_git_ref(f"heads/{default_branch}").object.sha
     front_matter = "refs/heads/"
     branch_name = f"codeowners-{str(uuid.uuid4())}"
-    repo.create_ref(front_matter + branch_name, default_branch_commit)
+    repo.create_git_ref(front_matter + branch_name, default_branch_commit)
     if create_new:
         repo.create_file(
             codeowners_filepath,
@@ -400,9 +408,12 @@ def commit_changes(
             branch=branch_name,
         )
     else:
-        repo.file_contents(codeowners_filepath).update(
-            message=commit_message,
-            content=codeowners_file_contents_new,
+        existing_file = repo.get_contents(codeowners_filepath, ref=branch_name)
+        repo.update_file(
+            codeowners_filepath,
+            commit_message,
+            codeowners_file_contents_new,
+            existing_file.sha,
             branch=branch_name,
         )
 
