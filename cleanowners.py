@@ -4,9 +4,10 @@ import base64
 import re
 import uuid
 
+from github import GithubException, UnknownObjectException
+
 import auth
 import env
-from github import GithubException, UnknownObjectException
 from markdown_writer import write_step_summary, write_to_markdown
 
 
@@ -252,7 +253,7 @@ def main():  # pragma: no cover
                         f" Check write permissions."
                     )
                     continue
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         error_message = str(e)
         print(f"Error: {error_message}")
     finally:
@@ -361,9 +362,7 @@ def get_usernames_from_codeowners(codeowners_file_contents, ignore_teams=True):
                     handle = handle.split()[0]
                     # Identify team handles by the presence of a slash.
                     # Ignore teams because non-org members cannot be in a team.
-                    if ignore_teams and "/" not in handle:
-                        usernames.append(handle)
-                    elif not ignore_teams:
+                    if not ignore_teams or "/" not in handle:
                         usernames.append(handle)
     return usernames
 
@@ -398,7 +397,7 @@ def commit_changes(
     default_branch = repo.default_branch
     default_branch_commit = repo.get_git_ref(f"heads/{default_branch}").object.sha
     front_matter = "refs/heads/"
-    branch_name = f"codeowners-{str(uuid.uuid4())}"
+    branch_name = f"codeowners-{uuid.uuid4()!s}"
     repo.create_git_ref(front_matter + branch_name, default_branch_commit)
     if create_new:
         repo.create_file(

@@ -5,6 +5,8 @@ import uuid
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
+from github import UnknownObjectException
+
 from cleanowners import (
     build_default_codeowners,
     cleanup_whitespace,
@@ -16,7 +18,6 @@ from cleanowners import (
     print_stats,
     remove_username_from_content,
 )
-from github import UnknownObjectException
 
 
 class TestCommitChanges(unittest.TestCase):
