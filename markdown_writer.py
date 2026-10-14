@@ -94,8 +94,7 @@ def write_step_summary(
         _write_repos_missing_codeowners(file, repos_missing_codeowners, warning_suffix)
         if pull_request_urls:
             file.write("## Pull Requests Created :link:\n")
-            for url in pull_request_urls:
-                file.write(f"- {url}\n")
+            file.write("".join(f"- {url}\n" for url in pull_request_urls))
             file.write("\n")
         if error:
             file.write(f"## Error :x:\n\n{error}\n")
