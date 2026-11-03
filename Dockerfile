@@ -7,7 +7,7 @@ WORKDIR /action/workspace
 COPY pyproject.toml uv.lock /action/workspace/
 COPY --from=ghcr.io/astral-sh/uv:0.10.9@sha256:10902f58a1606787602f303954cea099626a4adb02acbac4c69920fe9d278f82 /uv /uvx /bin/
 RUN apt-get -y update \
-    && apt-get -y install --no-install-recommends build-essential libffi-dev \
+    && apt-get -y install --no-install-recommends build-essential=12.12 libffi-dev=3.4.8-2 \
     && uv sync --frozen --no-dev --no-editable
 
 FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58
