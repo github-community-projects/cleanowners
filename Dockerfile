@@ -1,7 +1,7 @@
 #checkov:skip=CKV_DOCKER_2
 #checkov:skip=CKV_DOCKER_3
 #trivy:ignore:AVD-DS-0002
-FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS builder
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS builder
 
 WORKDIR /action/workspace
 COPY pyproject.toml uv.lock /action/workspace/
@@ -10,7 +10,7 @@ RUN apt-get -y update \
     && apt-get -y install --no-install-recommends build-essential=12.12 libffi-dev=3.4.8-2 \
     && uv sync --frozen --no-dev --no-editable
 
-FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 LABEL org.opencontainers.image.source=https://github.com/github-community-projects/cleanowners
 
 WORKDIR /action/workspace
